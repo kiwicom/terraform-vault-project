@@ -33,7 +33,7 @@ resource "vault_approle_auth_backend_role_secret_id" "cicd" {
 resource "gitlab_project_variable" "role_id" {
   count             = length(local.cicd_policies) > 0 ? 1 : 0
   project           = data.gitlab_project.project.id
-  key               = "TF_VAR_VAULT_ENTERPRISE_ROLE_ID"
+  key               = "${var.cicd_variable_prefix}ROLE_ID"
   value             = vault_approle_auth_backend_role.cicd[0].role_id
   masked            = true
   environment_scope = "*"
@@ -42,7 +42,7 @@ resource "gitlab_project_variable" "role_id" {
 resource "gitlab_project_variable" "secret_id" {
   count             = length(local.cicd_policies) > 0 ? 1 : 0
   project           = data.gitlab_project.project.id
-  key               = "TF_VAR_VAULT_ENTERPRISE_SECRET_ID"
+  key               = "${var.cicd_variable_prefix}SECRET_ID"
   value             = vault_approle_auth_backend_role_secret_id.cicd[0].secret_id
   masked            = true
   environment_scope = "*"

@@ -4,15 +4,15 @@ locals {
 
 data "vault_policy_document" "runtime" {
   rule {
-    path = "kw/secret/${local.gitlab_project_path}/runtime/*"
+    path         = "kw/secret/${local.gitlab_project_path}/runtime/*"
     capabilities = ["read", "list"]
   }
   rule {
-    path = "kw/secret/data/${local.gitlab_project_path}/runtime/*"
+    path         = "kw/secret/data/${local.gitlab_project_path}/runtime/*"
     capabilities = ["read"]
   }
   rule {
-    path = "kw/secret/metadata/${local.gitlab_project_path}/runtime/*"
+    path         = "kw/secret/metadata/${local.gitlab_project_path}/runtime/*"
     capabilities = ["read", "list"]
   }
 }

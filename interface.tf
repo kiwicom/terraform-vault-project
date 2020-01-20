@@ -1,15 +1,15 @@
 variable "project_id" {
-  type = string
+  type        = string
   description = "GitLab project ID"
 }
 
 variable "bad_practice_cicd_static_path" {
-  default = false
+  default     = false
   description = "Should be CICD policies and resources created - mostly bad practice"
 }
 
 variable "create_runtime" {
-  default = true
+  default     = true
   description = "Should be runtime policy created"
 }
 
@@ -46,6 +46,10 @@ variable "runtime_maintainer_groups" {
 variable "provided_roles" {
   default     = {}
   description = "App as secrets manager"
+}
+
+variable "cicd_variable_prefix" {
+  default = "TF_VAR_VAULT_ENTERPRISE_"
 }
 
 output "cicd_role_id" {
