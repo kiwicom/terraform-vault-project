@@ -14,7 +14,8 @@ Vault resources for Gitlab project.
 
 ```hcl
 module "project_automation_granny" {
-  source = "../application"
+  source  = "kiwicom/project/vault"
+  version = "1.0.0"
 
   # automation/granny
   project_id = 684
@@ -50,7 +51,8 @@ module "ns_tom_based_app" {
 
 ```hcl
 module "project_infra_bi_tf_db_roles" {
-  source = "../application"
+  source  = "kiwicom/project/vault"
+  version = "1.0.0"
 
   # infra/bi/tf-db-roles
   project_id     = 2845
@@ -74,7 +76,8 @@ module "project_infra_bi_tf_db_roles" {
 
 ```hcl
 module "project_search_team_katana" {
-  source = "../application"
+  source  = "kiwicom/project/vault"
+  version = "1.0.0"
 
   # search-team/katana
   project_id                    = 528
