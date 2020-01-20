@@ -49,7 +49,8 @@ variable "provided_roles" {
 }
 
 variable "cicd_variable_prefix" {
-  default = "TF_VAR_VAULT_ENTERPRISE_"
+  default     = "TF_VAR_VAULT_ENTERPRISE_"
+  description = "Prefix for Gitlab CICD variables"
 }
 
 output "cicd_role_id" {
