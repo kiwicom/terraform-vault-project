@@ -1,0 +1,109 @@
+# - CICD secrets - `kw/secret/[gitlab_path]/application/*`
+# - CICD approle `approle/role/[gitlab_path_cammel]_cicd`
+# - CICD policy - `kw/[gitlab_path]/application`
+# - CICD maintainer policy - `kw/[gitlab_path]/cicd_maintainer`
+data "gitlab_project" "project" {
+  id = var.project_id
+}
+
+locals {
+  approle_path              = "approle"
+  gitlab_project_path       = replace(data.gitlab_project.project.web_url, "https://gitlab.skypicker.com/", "")
+  gitlab_project_path_camel = replace(local.gitlab_project_path, "/", "_")
+  static_secrets_policies   = var.bad_practice_cicd_static_path ? [vault_policy.cicd[0].name] : []
+  cicd_policies             = concat(var.cicd_additinal_policies, local.static_secrets_policies)
+  cicd_maintainer_groups    = var.bad_practice_cicd_static_path ? concat(var.maintainer_groups, var.cicd_maintainer_groups) : []
+}
+
+# TODO load policies via data to ensure it exists
+
+resource "vault_approle_auth_backend_role" "cicd" {
+  count          = length(local.cicd_policies) > 0 ? 1 : 0
+  backend        = local.approle_path
+  role_name      = "kw_${local.gitlab_project_path_camel}_cicd"
+  token_policies = local.cicd_policies
+  token_ttl      = 3600
+}
+
+resource "vault_approle_auth_backend_role_secret_id" "cicd" {
+  count     = length(local.cicd_policies) > 0 ? 1 : 0
+  role_name = vault_approle_auth_backend_role.cicd[0].role_name
+}
+
+resource "gitlab_project_variable" "role_id" {
+  count             = length(local.cicd_policies) > 0 ? 1 : 0
+  project           = data.gitlab_project.project.id
+  key               = "TF_VAR_VAULT_ENTERPRISE_ROLE_ID"
+  value             = vault_approle_auth_backend_role.cicd[0].role_id
+  masked            = true
+  environment_scope = "*"
+}
+
+resource "gitlab_project_variable" "secret_id" {
+  count             = length(local.cicd_policies) > 0 ? 1 : 0
+  project           = data.gitlab_project.project.id
+  key               = "TF_VAR_VAULT_ENTERPRISE_SECRET_ID"
+  value             = vault_approle_auth_backend_role_secret_id.cicd[0].secret_id
+  masked            = true
+  environment_scope = "*"
+}
+
+# the bad practice thingy:
+resource "vault_policy" "cicd" {
+  count  = var.bad_practice_cicd_static_path ? 1 : 0
+  name   = "kw/secret/${local.gitlab_project_path}/cicd"
+  policy = <<EOT
+# access namespace, stage specific secrets
+path "kw/secret/${local.gitlab_project_path}/cicd/*" {
+  capabilities = ["read", "list"]
+}
+path "kw/secret/data/${local.gitlab_project_path}/cicd/*" {
+  capabilities = ["read"]
+}
+path "kw/secret/metadata/${local.gitlab_project_path}/cicd/*" {
+  capabilities = ["read", "list"]
+}
+EOT
+}
+
+data "vault_identity_group" "cicd" {
+  for_each   = toset(var.cicd_use_groups)
+  group_name = each.value
+}
+
+# devs read policy
+resource "vault_identity_group_policies" "cicd" {
+  for_each  = toset(var.cicd_use_groups)
+  group_id  = data.vault_identity_group.cicd[each.value].group_id
+  policies  = local.cicd_policies
+  exclusive = false
+}
+
+resource "vault_policy" "cicd_maintainers" {
+  count  = var.bad_practice_cicd_static_path ? 1 : 0
+  name   = "kw/secret/${local.gitlab_project_path}/cicd-maintainers"
+  policy = <<EOT
+# access namespace, stage specific secrets
+path "kw/secret/${local.gitlab_project_path}/cicd/*" {
+  capabilities = ["create", "update", "read", "delete", "list"]
+}
+path "kw/secret/data/${local.gitlab_project_path}/cicd/*" {
+  capabilities = ["create", "update", "read", "delete"]
+}
+path "kw/secret/metadata/${local.gitlab_project_path}/cicd/*" {
+  capabilities = ["create", "update", "read", "delete", "list"]
+}
+EOT
+}
+
+data "vault_identity_group" "cicd_maintainers" {
+  for_each   = toset(local.cicd_maintainer_groups)
+  group_name = each.value
+}
+
+resource "vault_identity_group_policies" "cicd_maintainers" {
+  for_each  = toset(local.cicd_maintainer_groups)
+  group_id  = data.vault_identity_group.cicd_maintainers[each.value].group_id
+  policies  = [vault_policy.cicd_maintainers[0].name]
+  exclusive = false
+}
