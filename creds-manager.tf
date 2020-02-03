@@ -1,7 +1,12 @@
 # provided_roles
 
+locals {
+  provided_roles = var.main_module_switch ? var.provided_roles : {}
+  stage_roles = flatten([for stage in keys(local.provided_roles) : formatlist("%s/creds/%s", stage, local.provided_roles[stage])])
+}
+
 data "vault_policy_document" "creds_maintainers" {
-  for_each = toset(keys(var.provided_roles))
+  for_each = toset(keys(local.provided_roles))
   rule {
     description  = "Manage creds kv1"
     path         = "kw/secret/${local.gitlab_project_path}/${each.key}/creds/*"
@@ -20,14 +25,9 @@ data "vault_policy_document" "creds_maintainers" {
 }
 
 resource "vault_policy" "creds_maintainer" {
-  for_each = toset(keys(var.provided_roles))
+  for_each = toset(keys(local.provided_roles))
   name     = "kw/secret/${local.gitlab_project_path}/${each.key}/creds-maintainer"
   policy   = data.vault_policy_document.creds_maintainers[each.key].hcl
-}
-
-locals {
-  stage_roles = flatten([for stage in keys(var.provided_roles) : formatlist("%s/creds/%s", stage, var.provided_roles[stage])])
-
 }
 
 data "vault_policy_document" "provided_roles" {
@@ -56,6 +56,5 @@ resource "vault_policy" "roles" {
 }
 
 output "roles_policies" {
-  # value = length(var.provided_roles) > 0 ? local.roles_policies_names : []
   value = [for policy in vault_policy.roles : policy.name]
 }

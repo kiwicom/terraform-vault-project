@@ -53,6 +53,11 @@ variable "cicd_variable_prefix" {
   description = "Prefix for Gitlab CICD variables"
 }
 
+variable "main_module_switch" {
+  default     = true
+  description = "All resource creation is optional."
+}
+
 output "cicd_role_id" {
   value = length(local.cicd_policies) < 1 ? "" : vault_approle_auth_backend_role.cicd[0].role_id
 }
