@@ -37,21 +37,35 @@ resource "vault_identity_group_policies" "runtime" {
   exclusive = false
 }
 
+locals {
+  runtime_path_parts = split("/", "${local.gitlab_project_path}/runtime")
+}
+
+data "vault_policy_document" "runtime" {
+  rule {
+    capabilities = ["create", "update", "read", "delete", "list"]
+    path = "kw/secret/data/${local.gitlab_project_path}/runtime/*"
+  }
+
+  rule {
+    capabilities = ["create", "update", "read", "delete", "list"]
+    path = "kw/secret/metadata/${local.gitlab_project_path}/runtime/*"
+  }
+
+  dynamic rule {
+    for_each = local.runtime_path_parts
+    content {
+      path         = "kw/secret/metadata/${join("/", slice(local.runtime_path_parts, 0, rule.key))}"
+      capabilities = ["list"]
+      description  = "list of subpath"
+    }
+  }
+}
+
 resource "vault_policy" "runtime_maintainers" {
   count  = var.main_module_switch && var.create_runtime ? 1 : 0
   name   = "kw/secret/${local.gitlab_project_path}/runtime-maintainers"
-  policy = <<EOT
-# access namespace, stage specific secrets
-path "kw/secret/${local.gitlab_project_path}/runtime/*" {
-  capabilities = ["create", "update", "read", "delete", "list"]
-}
-path "kw/secret/data/${local.gitlab_project_path}/runtime/*" {
-  capabilities = ["create", "update", "read", "delete"]
-}
-path "kw/secret/metadata/${local.gitlab_project_path}/runtime/*" {
-  capabilities = ["create", "update", "read", "delete", "list"]
-}
-EOT
+  policy = data.vault_policy_document.runtime.hcl
 }
 
 data "vault_identity_group" "runtime_maintainers" {

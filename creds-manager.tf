@@ -5,13 +5,12 @@ locals {
   stage_roles = flatten([for stage in keys(local.provided_roles) : formatlist("%s/creds/%s", stage, local.provided_roles[stage])])
 }
 
+locals {
+  creds_path_parts = split("/", "${local.gitlab_project_path}/runtime")
+}
+
 data "vault_policy_document" "creds_maintainers" {
   for_each = toset(keys(local.provided_roles))
-  rule {
-    description  = "Manage creds kv1"
-    path         = "kw/secret/${local.gitlab_project_path}/${each.key}/creds/*"
-    capabilities = ["create", "update", "read", "delete", "list"]
-  }
   rule {
     description  = "Manage creds kv2"
     path         = "kw/secret/data/${local.gitlab_project_path}/${each.key}/creds/*"
@@ -21,6 +20,15 @@ data "vault_policy_document" "creds_maintainers" {
     description  = "Manage creds kv2"
     path         = "kw/secret/metadata/${local.gitlab_project_path}/${each.key}/creds/*"
     capabilities = ["create", "update", "read", "delete", "list"]
+  }
+
+  dynamic rule {
+    for_each = split("/", "${local.gitlab_project_path}/${each.key}/creds")
+    content {
+      path         = "kw/secret/metadata/${join("/", slice(split("/", "${local.gitlab_project_path}/${each.key}/creds"), 0, rule.key))}"
+      capabilities = ["list"]
+      description  = "list of subpath"
+    }
   }
 }
 
@@ -32,11 +40,6 @@ resource "vault_policy" "creds_maintainer" {
 
 data "vault_policy_document" "provided_roles" {
   for_each = toset(local.stage_roles)
-  rule {
-    description  = "Access creds kv1"
-    path         = "kw/secret/${local.gitlab_project_path}/${each.value}"
-    capabilities = ["read", "list"]
-  }
   rule {
     description  = "Access creds kv2"
     path         = "kw/secret/data/${local.gitlab_project_path}/${each.value}"
