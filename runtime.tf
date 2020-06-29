@@ -41,7 +41,7 @@ locals {
   runtime_path_parts = split("/", "${local.gitlab_project_path}/runtime")
 }
 
-data "vault_policy_document" "runtime" {
+data "vault_policy_document" "runtime_maintainers" {
   rule {
     capabilities = ["create", "update", "read", "delete", "list"]
     path = "kw/secret/data/${local.gitlab_project_path}/runtime/*"
@@ -65,7 +65,7 @@ data "vault_policy_document" "runtime" {
 resource "vault_policy" "runtime_maintainers" {
   count  = var.main_module_switch && var.create_runtime ? 1 : 0
   name   = "kw/secret/${local.gitlab_project_path}/runtime-maintainers"
-  policy = data.vault_policy_document.runtime.hcl
+  policy = data.vault_policy_document.runtime_maintainers.hcl
 }
 
 data "vault_identity_group" "runtime_maintainers" {
