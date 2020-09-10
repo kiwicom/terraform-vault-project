@@ -18,7 +18,7 @@ variable "maintainer_groups" {
   description = "Whom to assign permissions to manage Runtime and CICD secrets"
 }
 
-variable "cicd_additinal_policies" {
+variable "cicd_additional_policies" {
   default     = []
   description = "Additional policies to assign to CICD of the project"
 }

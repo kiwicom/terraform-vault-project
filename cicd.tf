@@ -11,7 +11,7 @@ locals {
   gitlab_project_path       = replace(data.gitlab_project.project.web_url, "https://gitlab.skypicker.com/", "")
   gitlab_project_path_camel = replace(local.gitlab_project_path, "/", "_")
   static_secrets_policies   = var.main_module_switch && var.bad_practice_cicd_static_path ? [vault_policy.cicd[0].name] : []
-  cicd_policies             = var.main_module_switch ? concat(var.cicd_additinal_policies, local.static_secrets_policies) : []
+  cicd_policies             = var.main_module_switch ? concat(var.cicd_additional_policies, local.static_secrets_policies) : []
   cicd_maintainer_groups    = var.main_module_switch && var.bad_practice_cicd_static_path ? concat(var.maintainer_groups, var.cicd_maintainer_groups) : []
   cicd_use_groups           = var.main_module_switch ? var.cicd_use_groups : []
 }
