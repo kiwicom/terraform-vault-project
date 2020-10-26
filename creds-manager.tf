@@ -47,8 +47,27 @@ data "vault_policy_document" "provided_roles" {
   }
   rule {
     description  = "Access creds kv2"
+    path         = "kw/secret/data/${local.gitlab_project_path}/${each.value}/*"
+    capabilities = ["read", ]
+  }
+  rule {
+    description  = "Access creds kv2"
     path         = "kw/secret/metadata/${local.gitlab_project_path}/${each.value}"
     capabilities = ["read", ]
+  }
+  rule {
+    description  = "Access creds kv2"
+    path         = "kw/secret/metadata/${local.gitlab_project_path}/${each.value}/*"
+    capabilities = ["read", "list"]
+  }
+
+  dynamic rule {
+    for_each = split("/", "${local.gitlab_project_path}/${each.value}")
+    content {
+      path         = "kw/secret/metadata/${join("/", slice(split("/", "${local.gitlab_project_path}/${each.value}"), 0, rule.key))}"
+      capabilities = ["list"]
+      description  = "list of subpath"
+    }
   }
 }
 
