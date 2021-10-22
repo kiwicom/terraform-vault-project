@@ -2,8 +2,21 @@
 # - CICD approle `approle/role/[gitlab_path_cammel]_cicd`
 # - CICD policy - `kw/[gitlab_path]/application`
 # - CICD maintainer policy - `kw/[gitlab_path]/cicd_maintainer`
+locals {
+  gitlab_project_count = var.project_id != null ? 1 : 0
+  gitlab_group_count   = var.group_id != null ? 1 : 0
+}
+
 data "gitlab_project" "project" {
+  count = local.gitlab_project_count
+
   id = var.project_id
+}
+
+data "gitlab_group" "group" {
+  count = local.gitlab_group_count
+
+  id = var.group_id
 }
 
 locals {
@@ -33,8 +46,8 @@ resource "vault_approle_auth_backend_role_secret_id" "cicd" {
 }
 
 resource "gitlab_project_variable" "role_id" {
-  count             = var.main_module_switch && length(local.cicd_policies) > 0 ? 1 : 0
-  project           = data.gitlab_project.project.id
+  count             = var.main_module_switch && length(local.cicd_policies) > 0 ? local.gitlab_project_count : 0
+  project           = data.gitlab_project.project.0.id
   key               = "${var.cicd_variable_prefix}ROLE_ID"
   value             = vault_approle_auth_backend_role.cicd[0].role_id
   masked            = true
@@ -42,12 +55,28 @@ resource "gitlab_project_variable" "role_id" {
 }
 
 resource "gitlab_project_variable" "secret_id" {
-  count             = var.main_module_switch && length(local.cicd_policies) > 0 ? 1 : 0
-  project           = data.gitlab_project.project.id
+  count             = var.main_module_switch && length(local.cicd_policies) > 0 ? local.gitlab_project_count : 0
+  project           = data.gitlab_project.project.0.id
   key               = "${var.cicd_variable_prefix}SECRET_ID"
   value             = vault_approle_auth_backend_role_secret_id.cicd[0].secret_id
   masked            = true
   environment_scope = "*"
+}
+
+resource "gitlab_group_variable" "role_id" {
+  count  = var.main_module_switch && length(local.cicd_policies) > 0 ? local.gitlab_group_count : 0
+  group  = data.gitlab_group.group.0.id
+  key    = "${var.cicd_variable_prefix}ROLE_ID"
+  value  = vault_approle_auth_backend_role.cicd[0].role_id
+  masked = true
+}
+
+resource "gitlab_group_variable" "secret_id" {
+  count  = var.main_module_switch && length(local.cicd_policies) > 0 ? local.gitlab_group_count : 0
+  group  = data.gitlab_project.project.id
+  key    = "${var.cicd_variable_prefix}SECRET_ID"
+  value  = vault_approle_auth_backend_role_secret_id.cicd[0].secret_id
+  masked = true
 }
 
 # the bad practice thingy:
@@ -89,15 +118,15 @@ locals {
 data "vault_policy_document" "cicd" {
   rule {
     capabilities = ["create", "update", "read", "delete", "list"]
-    path = "kw/secret/data/${local.gitlab_project_path}/cicd/*"
+    path         = "kw/secret/data/${local.gitlab_project_path}/cicd/*"
   }
 
   rule {
     capabilities = ["create", "update", "read", "delete", "list"]
-    path = "kw/secret/metadata/${local.gitlab_project_path}/cicd/*"
+    path         = "kw/secret/metadata/${local.gitlab_project_path}/cicd/*"
   }
 
-  dynamic rule {
+  dynamic "rule" {
     for_each = local.cicd_path_parts
     content {
       path         = "kw/secret/metadata/${join("/", slice(local.cicd_path_parts, 0, rule.key))}"

@@ -1,6 +1,13 @@
 variable "project_id" {
   type        = string
   description = "GitLab project ID"
+  default     = null
+}
+
+variable "group_id" {
+  type        = string
+  description = "GitLab project ID"
+  default     = null
 }
 
 variable "bad_practice_cicd_static_path" {

@@ -40,15 +40,15 @@ locals {
 data "vault_policy_document" "runtime_maintainers" {
   rule {
     capabilities = ["create", "update", "read", "delete", "list"]
-    path = "kw/secret/data/${local.gitlab_project_path}/runtime/*"
+    path         = "kw/secret/data/${local.gitlab_project_path}/runtime/*"
   }
 
   rule {
     capabilities = ["create", "update", "read", "delete", "list"]
-    path = "kw/secret/metadata/${local.gitlab_project_path}/runtime/*"
+    path         = "kw/secret/metadata/${local.gitlab_project_path}/runtime/*"
   }
 
-  dynamic rule {
+  dynamic "rule" {
     for_each = local.runtime_path_parts
     content {
       path         = "kw/secret/metadata/${join("/", slice(local.runtime_path_parts, 0, rule.key))}"

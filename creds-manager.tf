@@ -2,7 +2,7 @@
 
 locals {
   provided_roles = var.main_module_switch ? var.provided_roles : {}
-  stage_roles = flatten([for stage in keys(local.provided_roles) : formatlist("%s/creds/%s", stage, local.provided_roles[stage])])
+  stage_roles    = flatten([for stage in keys(local.provided_roles) : formatlist("%s/creds/%s", stage, local.provided_roles[stage])])
 }
 
 locals {
@@ -22,7 +22,7 @@ data "vault_policy_document" "creds_maintainers" {
     capabilities = ["create", "update", "read", "delete", "list"]
   }
 
-  dynamic rule {
+  dynamic "rule" {
     for_each = split("/", "${local.gitlab_project_path}/${each.key}/creds")
     content {
       path         = "kw/secret/metadata/${join("/", slice(split("/", "${local.gitlab_project_path}/${each.key}/creds"), 0, rule.key))}"
@@ -61,7 +61,7 @@ data "vault_policy_document" "provided_roles" {
     capabilities = ["read", "list"]
   }
 
-  dynamic rule {
+  dynamic "rule" {
     for_each = split("/", "${local.gitlab_project_path}/${each.value}")
     content {
       path         = "kw/secret/metadata/${join("/", slice(split("/", "${local.gitlab_project_path}/${each.value}"), 0, rule.key))}"
